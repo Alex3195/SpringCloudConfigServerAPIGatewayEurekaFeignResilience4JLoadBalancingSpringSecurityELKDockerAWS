@@ -8,13 +8,49 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        - id: users-ws
+        - id: users-status
           uri: lb://users-ws
           predicates:
             - Path=/users/status
             - Method=GET
+            - Header=Authorization, Bearer (.*)
           filters:
             - RemoveRequestHeader=Cookie
+            - AuthorizationHeaderFilter
+
+        - id: users-create
+          uri: lb://users-ws
+          predicates:
+            - Path=/users/create
+            - Method=POST
+          filters:
+            - RemoveRequestHeader=Cookie
+
+        - id: users-login
+          uri: lb://users-ws
+          predicates:
+            - Path=/users/login
+            - Method=POST
+          filters:
+            - RemoveRequestHeader=Cookie
+
+        - id: users-get-by-id
+          uri: lb://users-ws
+          predicates:
+            - Path=/users/{id}
+          filters:
+            - RewritePath=/users/(?<id>.*), /users/${id}
+            - AuthorizationHeaderFilter
+        - id: users-get-update-delete
+          uri: lb://users-ws
+          predicates:
+            - Path=/users/**
+            - Method=GET,PUT,DELETE
+            - Header=Authorization, Bearer (.*)
+          filters:
+            - RemoveRequestHeader=Cookie
+            - AuthorizationHeaderFilter
+            - RewritePath=/users/(?<segment>.*), /$\{segment}
 server:
   port: 8082
 
@@ -24,3 +60,8 @@ eureka:
       defaultZone: http://localhost:8010/eureka
     register-with-eureka: true
     fetch-registry: true
+
+security:
+  jwt:
+    secret-key: 9b5167a3340fc7adc3937c19cac50aba15bf16bee615b997468809216a388068
+    expiration-time: 3600000 # in millliseconds
